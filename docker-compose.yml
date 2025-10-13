@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  # MinIO Object Storage
+  minio:
+    image: minio/minio:latest
+    container_name: jhub-minio
+    ports:
+      - "9000:9000"  # API
+      - "9001:9001"  # Console
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - jhub-network
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: jhub-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: jhub_admin
+      POSTGRES_PASSWORD: jhub_password
+      POSTGRES_DB: jhub_gallery
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jhub_admin -d jhub_gallery"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - jhub-network
+
+  # Backend API (will be added after setup)
+  # backend:
+  #   build: ./backend
+  #   container_name: jhub-backend
+  #   ports:
+  #     - "4000:4000"
+  #   environment:
+  #     NODE_ENV: development
+  #   env_file:
+  #     - ./backend/.env
+  #   depends_on:
+  #     minio:
+  #       condition: service_healthy
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   volumes:
+  #     - ./backend:/app
+  #     - /app/node_modules
+  #   networks:
+  #     - jhub-network
+
+  # Frontend (will be added after setup)
+  # frontend:
+  #   build: ./frontend
+  #   container_name: jhub-frontend
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     NODE_ENV: development
+  #   env_file:
+  #     - ./frontend/.env.local
+  #   depends_on:
+  #     - backend
+  #   volumes:
+  #     - ./frontend:/app
+  #     - /app/node_modules
+  #     - /app/.next
+  #   networks:
+  #     - jhub-network
+
+volumes:
+  minio_data:
+    driver: local
+  postgres_data:
+    driver: local
+
+networks:
+  jhub-network:
+    driver: bridge
