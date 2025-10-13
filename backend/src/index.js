@@ -6,6 +6,13 @@ import config from './config/index.js';
 import db from './config/database.js';
 import minioClient from './config/minio.js';
 
+// Import routes
+import folderRoutes from './routes/folderRoutes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
+import fileRoutes from './routes/fileRoutes.js';
+import shareRoutes from './routes/shareRoutes.js';
+import downloadRoutes from './routes/downloadRoutes.js';
+
 const app = express();
 
 // Middleware
@@ -24,14 +31,27 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API routes (to be added)
+// API root
 app.get(`${config.apiPrefix}/`, (req, res) => {
   res.json({
     message: 'JHUB Africa Photo Gallery API',
     version: '1.0.0',
-    docs: `${config.apiPrefix}/docs`,
+    endpoints: {
+      folders: `${config.apiPrefix}/folders`,
+      upload: `${config.apiPrefix}/upload`,
+      files: `${config.apiPrefix}/files`,
+      share: `${config.apiPrefix}/share`,
+      download: `${config.apiPrefix}/download`,
+    },
   });
 });
+
+// Mount API routes
+app.use(`${config.apiPrefix}/folders`, folderRoutes);
+app.use(`${config.apiPrefix}/upload`, uploadRoutes);
+app.use(`${config.apiPrefix}/files`, fileRoutes);
+app.use(`${config.apiPrefix}/share`, shareRoutes);
+app.use(`${config.apiPrefix}/download`, downloadRoutes);
 
 // 404 handler
 app.use((req, res) => {
