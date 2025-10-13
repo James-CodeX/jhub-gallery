@@ -13,6 +13,8 @@ interface GalleryGridProps {
   viewMode: 'grid' | 'list';
   searchQuery: string;
   onRefresh: () => void;
+  onFileClick?: (file: PhotoFile) => void;
+  onFolderClick?: (folderId: string) => void;
 }
 
 export function GalleryGrid({
@@ -21,10 +23,26 @@ export function GalleryGrid({
   viewMode,
   searchQuery,
   onRefresh,
+  onFileClick,
+  onFolderClick,
 }: GalleryGridProps) {
   const [selectedFile, setSelectedFile] = useState<PhotoFile | null>(null);
   const [menuOpenFor, setMenuOpenFor] = useState<string | null>(null);
   const deleteFile = useDeleteFile();
+
+  const handleFileClick = (file: PhotoFile) => {
+    if (onFileClick) {
+      onFileClick(file);
+    } else {
+      setSelectedFile(file);
+    }
+  };
+
+  const handleFolderClick = (folderId: string) => {
+    if (onFolderClick) {
+      onFolderClick(folderId);
+    }
+  };
 
   // Filter files by search query
   const filteredFiles = files.filter((file) =>
@@ -50,6 +68,7 @@ export function GalleryGrid({
           {subfolders.map((folder) => (
             <div
               key={folder.id}
+              onClick={() => handleFolderClick(folder.id)}
               className="group relative bg-white border-2 border-gray-200 rounded-lg p-4 hover:border-blue-500 hover:shadow-lg transition-all cursor-pointer"
             >
               <Folder className="w-12 h-12 mx-auto mb-3 text-blue-500" />
@@ -71,7 +90,7 @@ export function GalleryGrid({
               {/* Image */}
               <div
                 className="aspect-square bg-gray-100 flex items-center justify-center cursor-pointer"
-                onClick={() => setSelectedFile(file)}
+                onClick={() => handleFileClick(file)}
               >
                 {file.thumbnail_key ? (
                   <img
@@ -113,7 +132,7 @@ export function GalleryGrid({
                     <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-20 border border-gray-200">
                       <button
                         onClick={() => {
-                          setSelectedFile(file);
+                          handleFileClick(file);
                           setMenuOpenFor(null);
                         }}
                         className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -177,6 +196,22 @@ export function GalleryGrid({
               handleDelete(selectedFile);
               setSelectedFile(null);
             }}
+            onPrevious={
+              (() => {
+                const currentIndex = filteredFiles.findIndex(f => f.id === selectedFile.id);
+                return currentIndex > 0
+                  ? () => handleFileClick(filteredFiles[currentIndex - 1])
+                  : undefined;
+              })()
+            }
+            onNext={
+              (() => {
+                const currentIndex = filteredFiles.findIndex(f => f.id === selectedFile.id);
+                return currentIndex < filteredFiles.length - 1
+                  ? () => handleFileClick(filteredFiles[currentIndex + 1])
+                  : undefined;
+              })()
+            }
           />
         )}
       </>
@@ -222,7 +257,7 @@ export function GalleryGrid({
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <button
-                  onClick={() => setSelectedFile(file)}
+                  onClick={() => handleFileClick(file)}
                   className="text-blue-600 hover:text-blue-900 mr-4"
                 >
                   View
@@ -256,6 +291,22 @@ export function GalleryGrid({
             handleDelete(selectedFile);
             setSelectedFile(null);
           }}
+          onPrevious={
+            (() => {
+              const currentIndex = filteredFiles.findIndex(f => f.id === selectedFile.id);
+              return currentIndex > 0
+                ? () => handleFileClick(filteredFiles[currentIndex - 1])
+                : undefined;
+            })()
+          }
+          onNext={
+            (() => {
+              const currentIndex = filteredFiles.findIndex(f => f.id === selectedFile.id);
+              return currentIndex < filteredFiles.length - 1
+                ? () => handleFileClick(filteredFiles[currentIndex + 1])
+                : undefined;
+            })()
+          }
         />
       )}
     </div>
