@@ -53,6 +53,15 @@ export function ImagePreviewModal({
           src={getImageUrl(file.minio_key)}
           alt={file.original_name}
           className="max-w-full max-h-[90vh] object-contain"
+          onLoad={() => {
+            console.log('✅ Image loaded successfully:', getImageUrl(file.minio_key));
+          }}
+          onError={(e) => {
+            console.error('❌ Image failed to load');
+            console.error('   URL:', getImageUrl(file.minio_key));
+            console.error('   MinIO Key:', file.minio_key);
+            console.error('   Event:', e);
+          }}
         />
       </div>
 

@@ -8,6 +8,8 @@
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "migrate": "node scripts/migrate.js",
+    "migrate-folders": "node scripts/migrate-folders-to-minio.js",
+    "fix-minio": "node scripts/fix-minio-policies.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [

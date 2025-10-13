@@ -149,6 +149,26 @@ class FolderController {
       res.status(500).json(errorResponse(error.message, 500));
     }
   }
+
+  /**
+   * Ensure MinIO folder exists and get presigned URLs
+   * POST /api/folders/:id/ensure-minio
+   */
+  async ensureMinioFolder(req, res) {
+    try {
+      const { id } = req.params;
+
+      const result = await folderService.ensureMinioFolderExists(id);
+
+      res.json(successResponse(result, 'MinIO folder verified and presigned URLs generated'));
+    } catch (error) {
+      console.error('Ensure MinIO folder error:', error);
+      if (error.message === 'Folder not found') {
+        return res.status(404).json(errorResponse(error.message, 404));
+      }
+      res.status(500).json(errorResponse(error.message, 500));
+    }
+  }
 }
 
 export default new FolderController();

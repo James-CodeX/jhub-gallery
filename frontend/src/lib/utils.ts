@@ -82,7 +82,14 @@ export function getThumbnailUrl(thumbnailKey: string | null): string | null {
 export function getImageUrl(minioKey: string): string {
   const minioEndpoint = process.env.NEXT_PUBLIC_MINIO_ENDPOINT || 'http://minio.jameskaranja.me:9000';
   const bucket = process.env.NEXT_PUBLIC_MINIO_BUCKET_ORIGINAL || 'jhub-photos-original';
-  return `${minioEndpoint}/${bucket}/${minioKey}`;
+  const url = `${minioEndpoint}/${bucket}/${minioKey}`;
+  
+  // Debug logging
+  if (typeof window !== 'undefined' && !minioKey) {
+    console.warn('⚠️ getImageUrl called with empty minioKey');
+  }
+  
+  return url;
 }
 
 /**

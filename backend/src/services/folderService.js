@@ -1,5 +1,6 @@
 import db from '../config/database.js';
 import { v4 as uuidv4 } from 'uuid';
+import minioClient from '../config/minio.js';
 
 class FolderService {
   /**
@@ -37,17 +38,86 @@ class FolderService {
         throw new Error('Folder with this name already exists in this location');
       }
 
-      // Create folder
+      // Generate folder ID
+      const folderId = uuidv4();
+
+      // Create folder in database
       const result = await db.query(
         `INSERT INTO folders (id, name, parent_id, path, created_by)
          VALUES ($1, $2, $3, $4, $5)
          RETURNING *`,
-        [uuidv4(), name, parentId, folderPath, createdBy]
+        [folderId, name, parentId, folderPath, createdBy]
       );
 
-      return result.rows[0];
+      const folder = result.rows[0];
+
+      // Create corresponding folder in MinIO bucket
+      // In MinIO/S3, folders are virtual - we create them by putting an empty object with a trailing slash
+      try {
+        const minioFolderKey = `${folderId}/.folder`;
+        await minioClient.getClient().putObject(
+          minioClient.buckets.original,
+          minioFolderKey,
+          Buffer.from(''),
+          0,
+          {
+            'Content-Type': 'application/x-directory'
+          }
+        );
+        console.log(`✅ Created MinIO folder for: ${folderPath} (${folderId})`);
+      } catch (minioError) {
+        console.error(`⚠️ Failed to create MinIO folder for ${folderPath}:`, minioError.message);
+        // Continue anyway - folder exists in database
+      }
+
+      // Generate presigned URLs for the folder
+      folder.presignedUrls = await this.generateFolderPresignedUrls(folderId);
+
+      return folder;
     } catch (error) {
       throw error;
+    }
+  }
+
+  /**
+   * Generate presigned URLs for folder operations
+   */
+  async generateFolderPresignedUrls(folderId) {
+    try {
+      const urls = {
+        uploadUrl: null,
+        listUrl: null,
+        folderId: folderId
+      };
+
+      // Generate presigned URL for uploading files to this folder
+      // This URL can be used to upload files directly to MinIO
+      const uploadKey = `${folderId}/upload-${Date.now()}.tmp`;
+      urls.uploadUrl = await minioClient.getClient().presignedPutObject(
+        minioClient.buckets.original,
+        uploadKey,
+        3600 // 1 hour expiry
+      );
+
+      // Generate presigned URL for listing folder contents
+      // This is less common but can be useful for direct S3 access
+      const folderPrefix = `${folderId}/`;
+      urls.listUrl = await minioClient.getClient().presignedUrl(
+        'GET',
+        minioClient.buckets.original,
+        folderPrefix,
+        3600 // 1 hour expiry
+      );
+
+      return urls;
+    } catch (error) {
+      console.error('Error generating presigned URLs:', error);
+      return {
+        uploadUrl: null,
+        listUrl: null,
+        folderId: folderId,
+        error: error.message
+      };
     }
   }
 
@@ -80,13 +150,16 @@ class FolderService {
 
       // Get files in this folder
       const filesResult = await db.query(
-        `SELECT id, filename, original_name, size, mime_type, 
-                thumbnail_key, uploaded_at
+        `SELECT id, filename, original_name, minio_key, size, mime_type, 
+                thumbnail_key, width, height, uploaded_at, uploaded_by
          FROM files 
          WHERE folder_id = $1
          ORDER BY uploaded_at DESC`,
         [folderId]
       );
+
+      // Generate presigned URLs for the folder
+      folder.presignedUrls = await this.generateFolderPresignedUrls(folderId);
 
       return {
         folder,
@@ -308,6 +381,57 @@ class FolderService {
       );
 
       return result.rows;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Ensure MinIO folder exists for a database folder
+   * Useful for migrating existing folders or fixing issues
+   */
+  async ensureMinioFolderExists(folderId) {
+    try {
+      const folderResult = await db.query(
+        'SELECT * FROM folders WHERE id = $1',
+        [folderId]
+      );
+
+      if (folderResult.rows.length === 0) {
+        throw new Error('Folder not found');
+      }
+
+      const folder = folderResult.rows[0];
+
+      // Create folder marker in MinIO
+      const minioFolderKey = `${folderId}/.folder`;
+      
+      try {
+        // Check if folder marker already exists
+        await minioClient.getClient().statObject(
+          minioClient.buckets.original,
+          minioFolderKey
+        );
+        console.log(`✅ MinIO folder already exists for: ${folder.path}`);
+      } catch (error) {
+        // Folder doesn't exist, create it
+        await minioClient.getClient().putObject(
+          minioClient.buckets.original,
+          minioFolderKey,
+          Buffer.from(''),
+          0,
+          {
+            'Content-Type': 'application/x-directory'
+          }
+        );
+        console.log(`✅ Created MinIO folder for: ${folder.path}`);
+      }
+
+      return {
+        folder,
+        minioKey: minioFolderKey,
+        presignedUrls: await this.generateFolderPresignedUrls(folderId)
+      };
     } catch (error) {
       throw error;
     }

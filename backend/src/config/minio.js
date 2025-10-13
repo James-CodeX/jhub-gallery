@@ -34,8 +34,27 @@ class MinIOClient {
         console.log(`✅ Bucket exists: ${this.buckets.thumbnails}`);
       }
 
-      // Set bucket policies for public read access on thumbnails
-      const policy = {
+      // Set bucket policy for public read access on original photos
+      const originalPolicy = {
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Principal: { AWS: ['*'] },
+            Action: ['s3:GetObject'],
+            Resource: [`arn:aws:s3:::${this.buckets.original}/*`],
+          },
+        ],
+      };
+
+      await this.client.setBucketPolicy(
+        this.buckets.original,
+        JSON.stringify(originalPolicy)
+      );
+      console.log(`✅ Set public read policy for: ${this.buckets.original}`);
+
+      // Set bucket policy for public read access on thumbnails
+      const thumbnailPolicy = {
         Version: '2012-10-17',
         Statement: [
           {
@@ -49,7 +68,7 @@ class MinIOClient {
 
       await this.client.setBucketPolicy(
         this.buckets.thumbnails,
-        JSON.stringify(policy)
+        JSON.stringify(thumbnailPolicy)
       );
       console.log(`✅ Set public read policy for: ${this.buckets.thumbnails}`);
 

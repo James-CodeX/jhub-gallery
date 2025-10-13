@@ -47,6 +47,13 @@ router.get('/:id/stats', asyncHandler(folderController.getFolderStats.bind(folde
 router.put('/:id', asyncHandler(folderController.updateFolder.bind(folderController)));
 
 /**
+ * @route   POST /api/folders/:id/ensure-minio
+ * @desc    Ensure MinIO folder exists and get presigned URLs
+ * @access  Public (add auth middleware later)
+ */
+router.post('/:id/ensure-minio', asyncHandler(folderController.ensureMinioFolder.bind(folderController)));
+
+/**
  * @route   DELETE /api/folders/:id
  * @desc    Delete folder
  * @access  Public (add auth middleware later)
