@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Enable standalone output for Docker optimization
+  output: 'standalone',
   images: {
     remotePatterns: [
       {
@@ -8,6 +10,21 @@ const nextConfig = {
         hostname: 'localhost',
         port: '9000',
         pathname: '/jhub-photos-**/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'minio',
+        port: '9000',
+        pathname: '/jhub-photos-**/**',
+      },
+      // Add support for any hostname (for production)
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+      {
+        protocol: 'http',
+        hostname: '**',
       },
     ],
   },

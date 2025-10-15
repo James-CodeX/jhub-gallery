@@ -49,6 +49,7 @@ coverage/
 
 # Docker
 docker-compose.override.yml
+.env
 
 # Temporary files
 tmp/
@@ -56,3 +57,6 @@ temp/
 *.tmp
 *.bak
 *.cache
+
+# Uploads
+backend/uploads/

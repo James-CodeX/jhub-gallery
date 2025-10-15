@@ -1,0 +1,185 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: jhub-gallery-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-jhub_gallery}
+      POSTGRES_USER: ${POSTGRES_USER:-jhub_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jhub_password}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - jhub-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-jhub_admin} -d ${POSTGRES_DB:-jhub_gallery}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MinIO Object Storage
+  minio:
+    image: minio/minio:latest
+    container_name: jhub-gallery-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin123}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    networks:
+      - jhub-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MinIO Initialization
+  minio-init:
+    image: minio/mc:latest
+    container_name: jhub-gallery-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin123}
+      MINIO_BUCKET_ORIGINAL: ${MINIO_BUCKET_ORIGINAL:-jhub-photos-original}
+      MINIO_BUCKET_THUMBNAILS: ${MINIO_BUCKET_THUMBNAILS:-jhub-photos-thumbnails}
+    volumes:
+      - ./minio-init/init.sh:/init.sh:ro
+    networks:
+      - jhub-network
+    entrypoint: ["/bin/sh", "/init.sh"]
+    restart: "no"
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: jhub-gallery-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${BACKEND_PORT:-4000}
+      API_PREFIX: ${API_PREFIX:-/api}
+      
+      # Database
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB:-jhub_gallery}
+      POSTGRES_USER: ${POSTGRES_USER:-jhub_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-jhub_password}
+      POSTGRES_SSLMODE: disable
+      
+      # MinIO
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_USE_SSL: false
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin123}
+      MINIO_BUCKET_ORIGINAL: ${MINIO_BUCKET_ORIGINAL:-jhub-photos-original}
+      MINIO_BUCKET_THUMBNAILS: ${MINIO_BUCKET_THUMBNAILS:-jhub-photos-thumbnails}
+      
+      # JWT
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-this-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      
+      # Upload
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE:-52428800}
+      MAX_FILES_PER_UPLOAD: ${MAX_FILES_PER_UPLOAD:-500}
+      ALLOWED_FILE_TYPES: ${ALLOWED_FILE_TYPES:-image/jpeg,image/png,image/gif,image/webp,image/bmp,image/tiff}
+      
+      # Thumbnails
+      THUMBNAIL_WIDTH: ${THUMBNAIL_WIDTH:-400}
+      THUMBNAIL_HEIGHT: ${THUMBNAIL_HEIGHT:-400}
+      THUMBNAIL_QUALITY: ${THUMBNAIL_QUALITY:-80}
+      
+      # CORS
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      
+      # Share Links
+      SHARE_LINK_EXPIRY_DAYS: ${SHARE_LINK_EXPIRY_DAYS:-30}
+    ports:
+      - "${BACKEND_PORT:-4000}:4000"
+    volumes:
+      - backend_uploads:/app/uploads
+    networks:
+      - jhub-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Web Application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000/api}
+        NEXT_PUBLIC_MINIO_ENDPOINT: ${NEXT_PUBLIC_MINIO_ENDPOINT:-http://localhost:9000}
+        NEXT_PUBLIC_MINIO_BUCKET_ORIGINAL: ${MINIO_BUCKET_ORIGINAL:-jhub-photos-original}
+        NEXT_PUBLIC_MINIO_BUCKET_THUMBNAILS: ${MINIO_BUCKET_THUMBNAILS:-jhub-photos-thumbnails}
+    container_name: jhub-gallery-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000/api}
+      NEXT_PUBLIC_MINIO_ENDPOINT: ${NEXT_PUBLIC_MINIO_ENDPOINT:-http://localhost:9000}
+      NEXT_PUBLIC_MINIO_BUCKET_ORIGINAL: ${MINIO_BUCKET_ORIGINAL:-jhub-photos-original}
+      NEXT_PUBLIC_MINIO_BUCKET_THUMBNAILS: ${MINIO_BUCKET_THUMBNAILS:-jhub-photos-thumbnails}
+      NEXT_PUBLIC_MINIO_URL: ${NEXT_PUBLIC_MINIO_ENDPOINT:-http://localhost:9000}
+      NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-JHUB Gallery}
+      NEXT_PUBLIC_MAX_FILE_SIZE: ${MAX_FILE_SIZE:-52428800}
+      NEXT_PUBLIC_MAX_FILES_PER_UPLOAD: ${MAX_FILES_PER_UPLOAD:-500}
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    networks:
+      - jhub-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+# Networks
+networks:
+  jhub-network:
+    driver: bridge
+    name: jhub-gallery-network
+
+# Volumes
+volumes:
+  postgres_data:
+    name: jhub-gallery-postgres-data
+  minio_data:
+    name: jhub-gallery-minio-data
+  backend_uploads:
+    name: jhub-gallery-backend-uploads
