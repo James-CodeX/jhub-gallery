@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { foldersApi } from '@/lib/api/folders';
 import { useFolderTree } from '@/lib/hooks/useFolders';
-import { Folder, Image as ImageIcon, ChevronRight, ChevronDown, Menu, X, Grid3x3, List } from 'lucide-react';
+import { Folder, Image as ImageIcon, ChevronRight, ChevronDown, Menu, X, Grid3x3, List, Search } from 'lucide-react';
 import Link from 'next/link';
 import { ImagePreviewModal } from '@/components/gallery/ImagePreviewModal';
 import { getThumbnailUrl } from '@/lib/utils';
@@ -82,12 +82,18 @@ export default function FolderGalleryPage() {
   const folderId = params.folderId as string;
   const [selectedFile, setSelectedFile] = useState<PhotoFile | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768;
+    }
+    return true;
+  });
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set([folderId]));
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'date'>('name');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [gridSize, setGridSize] = useState<'small' | 'medium' | 'large'>('medium');
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const { data: folderData, isLoading } = useQuery({
     queryKey: ['folder', folderId],
@@ -210,22 +216,28 @@ export default function FolderGalleryPage() {
                   )}
                 </p>
               </div>
+              <button
+                onClick={() => setSearchOpen(!searchOpen)}
+                className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <Search className="w-5 h-5" />
+              </button>
             </div>
-            <div className="flex gap-3">
+            <div className={`flex-wrap gap-2 mt-4 ${searchOpen ? 'flex' : 'hidden md:flex'}`}>
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search photos..."
-                className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                placeholder="Search..."
+                className="flex-1 min-w-[120px] px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
               />
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as 'name' | 'date')}
-                className="px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
               >
-                <option value="name">Sort by Name</option>
-                <option value="date">Sort by Date</option>
+                <option value="name">Name</option>
+                <option value="date">Date</option>
               </select>
               <div className="flex border border-gray-200 rounded-lg overflow-hidden">
                 <button
@@ -247,18 +259,18 @@ export default function FolderGalleryPage() {
                 <select
                   value={gridSize}
                   onChange={(e) => setGridSize(e.target.value as 'small' | 'medium' | 'large')}
-                  className="px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                  className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
                 >
-                  <option value="small">Small</option>
-                  <option value="medium">Medium</option>
-                  <option value="large">Large</option>
+                  <option value="small">S</option>
+                  <option value="medium">M</option>
+                  <option value="large">L</option>
                 </select>
               )}
             </div>
           </div>
         </header>
 
-        <div className="px-8 pt-6 pb-8">
+        <div className="px-8 pt-1 pb-8">
           {folderData.subfolders.length > 0 && (
             <div className="mb-8">
               <h3 className="text-sm font-medium text-gray-700 mb-3 uppercase tracking-wide">Folders</h3>
