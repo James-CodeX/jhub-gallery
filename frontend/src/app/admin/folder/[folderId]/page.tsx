@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useFolder, useFolderTree } from '@/lib/hooks/useFolders';
 import { CreateFolderDialog } from '@/components/dialogs/CreateFolderDialog';
@@ -213,22 +213,26 @@ export default function FolderPage() {
   };
 
   // Filter and sort files
-  const filteredFiles = folder?.files
-    .filter(file => file.original_name.toLowerCase().includes(searchQuery.toLowerCase()))
-    .sort((a, b) => {
-      if (sortBy === 'name') return a.original_name.localeCompare(b.original_name);
-      return new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime();
-    }) || [];
+  const filteredFiles = useMemo(() => {
+    return folder?.files
+      .filter(file => file.original_name.toLowerCase().includes(searchQuery.toLowerCase()))
+      .sort((a, b) => {
+        if (sortBy === 'name') return a.original_name.localeCompare(b.original_name);
+        return new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime();
+      }) || [];
+  }, [folder?.files, searchQuery, sortBy]);
 
   // Handle opening image from URL on mount
   useEffect(() => {
     const imageId = searchParams.get('file');
-    if (imageId && filteredFiles.length > 0) {
+    if (imageId && filteredFiles.length > 0 && selectedFile?.id !== imageId) {
       const index = filteredFiles.findIndex(f => f.id === imageId);
       if (index !== -1) {
         setSelectedFile(filteredFiles[index]);
         setSelectedIndex(index);
       }
+    } else if (!imageId && selectedFile) {
+      setSelectedFile(null);
     }
   }, [searchParams, filteredFiles]);
 
@@ -509,7 +513,7 @@ export default function FolderPage() {
                       </button>
                       {menuOpenFor === file.id && (
                         <>
-                          <div className="fixed inset-0 z-20" onClick={() => setMenuOpenFor(null)} />
+                          <div className="fixed inset-0 z-20" onClick={(e) => { e.stopPropagation(); setMenuOpenFor(null); }} />
                           <div className="absolute top-12 left-2 w-40 bg-white rounded-lg shadow-lg z-30 border border-gray-200 py-1">
                             <button
                               onClick={(e) => {
