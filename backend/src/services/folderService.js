@@ -228,7 +228,7 @@ class FolderService {
 
       // Don't allow renaming root folder
       if (folder.parent_id === null) {
-        throw new Error('Cannot rename root folder');
+        throw new Error('Cannot rename Default Home Folder');
       }
 
       // Build new path
@@ -312,7 +312,7 @@ class FolderService {
 
       // Don't allow deleting root folder
       if (folder.parent_id === null) {
-        throw new Error('Cannot delete root folder');
+        throw new Error('Cannot delete Default Home Folder');
       }
 
       // Get all files in this folder and subfolders

@@ -99,7 +99,7 @@ CREATE TRIGGER update_upload_sessions_updated_at BEFORE UPDATE ON upload_session
 INSERT INTO folders (id, name, parent_id, path, created_by)
 VALUES (
     uuid_generate_v4(),
-    'Root',
+    'Default Home Folder',
     NULL,
     '/',
     'system'

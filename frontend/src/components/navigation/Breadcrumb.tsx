@@ -10,7 +10,7 @@ interface BreadcrumbProps {
 }
 
 export function Breadcrumb({ currentFolder }: BreadcrumbProps) {
-  const breadcrumbs = currentFolder ? buildBreadcrumbs(currentFolder.path) : [{ name: 'Root', path: '/' }];
+  const breadcrumbs = currentFolder ? buildBreadcrumbs(currentFolder.path) : [{ name: 'Default Home Folder', path: '/' }];
 
   return (
     <nav className="flex items-center space-x-2 text-sm text-gray-600">
