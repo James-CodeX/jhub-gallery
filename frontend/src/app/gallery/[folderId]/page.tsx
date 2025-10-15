@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { foldersApi } from '@/lib/api/folders';
@@ -33,8 +33,8 @@ function FolderTreeNode({
         href={`/gallery/${folder.id}`}
         className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
           isCurrent 
-            ? 'bg-gray-900 text-white' 
-            : 'text-gray-700 hover:bg-gray-100'
+            ? 'bg-gray-100 text-gray-900 font-medium border border-gray-300' 
+            : 'text-gray-700 hover:bg-gray-50'
         }`}
       >
         {hasChildren && (
@@ -101,6 +101,34 @@ export default function FolderGalleryPage() {
   });
 
   const { data: folderTree } = useFolderTree();
+
+  // Helper to find all parent folder IDs
+  const findParentFolders = (tree: FolderTree[] | undefined, targetId: string, parents: string[] = []): string[] | null => {
+    if (!tree) return null;
+    for (const folder of tree) {
+      if (folder.id === targetId) return parents;
+      if (folder.children?.length) {
+        const result = findParentFolders(folder.children, targetId, [...parents, folder.id]);
+        if (result) return result;
+      }
+    }
+    return null;
+  };
+
+  // Expand parent folders when navigating
+  useEffect(() => {
+    if (folderTree) {
+      const parents = findParentFolders(folderTree, folderId);
+      if (parents) {
+        setExpandedFolders(prev => {
+          const expanded = new Set(prev);
+          parents.forEach(id => expanded.add(id));
+          expanded.add(folderId);
+          return expanded;
+        });
+      }
+    }
+  }, [folderId, folderTree]);
 
   const toggleFolder = (id: string) => {
     setExpandedFolders(prev => {
