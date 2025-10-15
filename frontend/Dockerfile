@@ -48,17 +48,20 @@ WORKDIR /app
 # Install dumb-init
 RUN apk add --no-cache dumb-init
 
-ENV NODE_ENV production
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_OPTIONS="--max-old-space-size=1024"
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nextjs -u 1001
 
 # Copy necessary files for standalone Next.js
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+# The standalone folder already contains the server and dependencies
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Public folder needs to be copied into the standalone structure
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 # Set correct permissions
 RUN chown -R nextjs:nodejs /app
@@ -75,6 +78,10 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
 
 # Use dumb-init to run the application
 ENTRYPOINT ["dumb-init", "--"]
+
+# Set hostname to listen on all interfaces
+ENV HOSTNAME="0.0.0.0"
+ENV PORT=3000
 
 # Start Next.js server
 CMD ["node", "server.js"]
