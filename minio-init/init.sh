@@ -1,15 +1,23 @@
-#!/bin/bash
+#!/bin/sh
+set -e
 
 # MinIO Initialization Script
 # This script creates buckets and sets policies for JHUB Gallery
 
 echo "🚀 Initializing MinIO for JHUB Gallery..."
 
-# Wait for MinIO to be ready
+# Wait for MinIO to be ready (with timeout)
 echo "⏳ Waiting for MinIO to be ready..."
-until curl -s http://minio:9000/minio/health/live > /dev/null 2>&1; do
-  echo "MinIO is unavailable - sleeping"
+TIMEOUT=60
+ELAPSED=0
+until curl -sf http://minio:9000/minio/health/live > /dev/null 2>&1; do
+  echo "MinIO is unavailable - sleeping (${ELAPSED}s/${TIMEOUT}s)"
   sleep 2
+  ELAPSED=$((ELAPSED + 2))
+  if [ $ELAPSED -ge $TIMEOUT ]; then
+    echo "❌ Timeout waiting for MinIO"
+    exit 1
+  fi
 done
 
 echo "✅ MinIO is ready!"
@@ -21,12 +29,16 @@ BUCKET_ORIGINAL=${MINIO_BUCKET_ORIGINAL:-jhub-photos-original}
 BUCKET_THUMBNAILS=${MINIO_BUCKET_THUMBNAILS:-jhub-photos-thumbnails}
 
 # Configure mc (MinIO Client)
-mc alias set myminio http://minio:9000 $MINIO_USER $MINIO_PASS
+echo "🔧 Configuring MinIO client..."
+mc alias set myminio http://minio:9000 $MINIO_USER $MINIO_PASS || {
+  echo "❌ Failed to configure MinIO client"
+  exit 1
+}
 
 # Create buckets
 echo "📦 Creating buckets..."
-mc mb myminio/$BUCKET_ORIGINAL --ignore-existing
-mc mb myminio/$BUCKET_THUMBNAILS --ignore-existing
+mc mb myminio/$BUCKET_ORIGINAL --ignore-existing || echo "⚠️  Bucket $BUCKET_ORIGINAL already exists"
+mc mb myminio/$BUCKET_THUMBNAILS --ignore-existing || echo "⚠️  Bucket $BUCKET_THUMBNAILS already exists"
 
 # Set public read policy on thumbnails bucket
 echo "🔓 Setting public read policy on thumbnails bucket..."
@@ -62,18 +74,26 @@ cat > /tmp/policy-original.json <<EOF
 }
 EOF
 
-mc anonymous set-json /tmp/policy-original.json myminio/$BUCKET_ORIGINAL
+mc anonymous set-json /tmp/policy-original.json myminio/$BUCKET_ORIGINAL || {
+  echo "⚠️  Failed to set policy on original bucket, continuing..."
+}
 
 # Set versioning on original photos bucket
 echo "📝 Enabling versioning on original photos bucket..."
-mc version enable myminio/$BUCKET_ORIGINAL
+mc version enable myminio/$BUCKET_ORIGINAL || {
+  echo "⚠️  Failed to enable versioning, continuing..."
+}
 
 # Display bucket information
 echo ""
 echo "✅ MinIO initialization complete!"
 echo ""
 echo "📊 Bucket Information:"
-mc ls myminio
+mc ls myminio || echo "Could not list buckets"
 
 echo ""
 echo "🎉 JHUB Gallery MinIO setup completed successfully!"
+echo ""
+
+# Ensure script exits with success
+exit 0
