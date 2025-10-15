@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { foldersApi } from '@/lib/api/folders';
 import { useFolderTree } from '@/lib/hooks/useFolders';
-import { Folder, Image as ImageIcon, ChevronRight, ChevronDown, Menu, X, Grid3x3, List, Search } from 'lucide-react';
+import { Folder, Image as ImageIcon, ChevronRight, ChevronDown, Menu, X, Grid3x3, List, Search, Info } from 'lucide-react';
 import Link from 'next/link';
 import { ImagePreviewModal } from '@/components/gallery/ImagePreviewModal';
 import { getThumbnailUrl } from '@/lib/utils';
@@ -94,6 +94,7 @@ export default function FolderGalleryPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [gridSize, setGridSize] = useState<'small' | 'medium' | 'large'>('medium');
   const [searchOpen, setSearchOpen] = useState(false);
+  const [infoFile, setInfoFile] = useState<PhotoFile | null>(null);
 
   const { data: folderData, isLoading } = useQuery({
     queryKey: ['folder', folderId],
@@ -147,15 +148,6 @@ export default function FolderGalleryPage() {
     setSelectedIndex(index);
   };
 
-  const handleNavigate = (direction: 'prev' | 'next') => {
-    if (!folderData) return;
-    const newIndex = direction === 'next' 
-      ? (selectedIndex + 1) % folderData.files.length
-      : (selectedIndex - 1 + folderData.files.length) % folderData.files.length;
-    setSelectedIndex(newIndex);
-    setSelectedFile(folderData.files[newIndex]);
-  };
-
   // Filter and sort files
   const filteredFiles = folderData?.files
     .filter(file => file.original_name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -163,6 +155,14 @@ export default function FolderGalleryPage() {
       if (sortBy === 'name') return a.original_name.localeCompare(b.original_name);
       return new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime();
     }) || [];
+
+  const handleNavigate = (direction: 'prev' | 'next') => {
+    const newIndex = direction === 'next' 
+      ? (selectedIndex + 1) % filteredFiles.length
+      : (selectedIndex - 1 + filteredFiles.length) % filteredFiles.length;
+    setSelectedIndex(newIndex);
+    setSelectedFile(filteredFiles[newIndex]);
+  };
 
   if (isLoading) {
     return (
@@ -332,10 +332,10 @@ export default function FolderGalleryPage() {
                   'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
                 }`}>
                   {filteredFiles.map((file, index) => (
-                    <button
+                    <div
                       key={file.id}
                       onClick={() => handleImageClick(file, index)}
-                      className="group relative aspect-square bg-gray-100 rounded-lg overflow-hidden hover:ring-2 hover:ring-gray-900 transition-all"
+                      className="group relative aspect-square bg-gray-100 rounded-lg overflow-hidden hover:ring-2 hover:ring-gray-900 transition-all cursor-pointer"
                     >
                       {file.thumbnail_key ? (
                         <img
@@ -349,12 +349,22 @@ export default function FolderGalleryPage() {
                           <ImageIcon className="w-8 h-8 text-gray-400" />
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setInfoFile(file);
+                        }}
+                        className="absolute top-2 right-2 p-1.5 bg-white/90 hover:bg-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-sm z-10"
+                        title="View info"
+                      >
+                        <Info className="w-4 h-4 text-gray-700" />
+                      </button>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                         <div className="absolute bottom-0 left-0 right-0 p-3">
                           <p className="text-white text-xs truncate">{file.original_name}</p>
                         </div>
                       </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -385,6 +395,16 @@ export default function FolderGalleryPage() {
                           {new Date(file.uploaded_at).toLocaleDateString()} • {(file.size / 1024 / 1024).toFixed(2)} MB
                         </p>
                       </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setInfoFile(file);
+                        }}
+                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                        title="View info"
+                      >
+                        <Info className="w-4 h-4 text-gray-600" />
+                      </button>
                     </button>
                   ))}
                 </div>
@@ -409,9 +429,48 @@ export default function FolderGalleryPage() {
           file={selectedFile}
           onClose={() => setSelectedFile(null)}
           onDelete={() => {}}
-          onNext={selectedIndex < folderData.files.length - 1 ? () => handleNavigate('next') : undefined}
+          onNext={selectedIndex < filteredFiles.length - 1 ? () => handleNavigate('next') : undefined}
           onPrevious={selectedIndex > 0 ? () => handleNavigate('prev') : undefined}
+          nextFile={selectedIndex < filteredFiles.length - 1 ? filteredFiles[selectedIndex + 1] : undefined}
+          previousFile={selectedIndex > 0 ? filteredFiles[selectedIndex - 1] : undefined}
         />
+      )}
+
+      {infoFile && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setInfoFile(null)}>
+          <div className="bg-white rounded-lg max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Image Information</h3>
+              <button onClick={() => setInfoFile(null)} className="p-1 hover:bg-gray-100 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Name</p>
+                <p className="text-sm text-gray-900 break-words">{infoFile.original_name}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Size</p>
+                <p className="text-sm text-gray-900">{(infoFile.size / 1024 / 1024).toFixed(2)} MB</p>
+              </div>
+              {infoFile.width && infoFile.height && (
+                <div>
+                  <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Dimensions</p>
+                  <p className="text-sm text-gray-900">{infoFile.width} × {infoFile.height} px</p>
+                </div>
+              )}
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Type</p>
+                <p className="text-sm text-gray-900">{infoFile.mime_type}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Uploaded</p>
+                <p className="text-sm text-gray-900">{new Date(infoFile.uploaded_at).toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -11,6 +11,8 @@ interface ImagePreviewModalProps {
   onDelete: () => void;
   onPrevious?: () => void;
   onNext?: () => void;
+  nextFile?: PhotoFile;
+  previousFile?: PhotoFile;
 }
 
 export function ImagePreviewModal({
@@ -19,9 +21,29 @@ export function ImagePreviewModal({
   onDelete,
   onPrevious,
   onNext,
+  nextFile,
+  previousFile,
 }: ImagePreviewModalProps) {
   const [showShareSuccess, setShowShareSuccess] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+
+  // Reset loaded state when file changes
+  useEffect(() => {
+    setImageLoaded(false);
+  }, [file.id]);
+
+  // Preload adjacent images
+  useEffect(() => {
+    if (nextFile) {
+      const img = new Image();
+      img.src = getImageUrl(nextFile.minio_key);
+    }
+    if (previousFile) {
+      const img = new Image();
+      img.src = getImageUrl(previousFile.minio_key);
+    }
+  }, [nextFile, previousFile]);
 
   // Handle keyboard navigation
   useEffect(() => {
@@ -133,15 +155,24 @@ export function ImagePreviewModal({
       )}
 
       {/* Image */}
-      <div className="max-w-7xl max-h-[90vh] mx-4">
+      <div className="max-w-7xl max-h-[90vh] mx-4 relative">
+        {!imageLoaded && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+          </div>
+        )}
         <img
           src={getImageUrl(file.minio_key)}
           alt={file.original_name}
-          className="max-w-full max-h-[90vh] object-contain"
+          className={`max-w-full max-h-[90vh] object-contain transition-opacity duration-200 ${
+            imageLoaded ? 'opacity-100' : 'opacity-0'
+          }`}
           onLoad={() => {
+            setImageLoaded(true);
             console.log('✅ Image loaded successfully:', getImageUrl(file.minio_key));
           }}
           onError={(e) => {
+            setImageLoaded(true);
             console.error('❌ Image failed to load');
             console.error('   URL:', getImageUrl(file.minio_key));
             console.error('   MinIO Key:', file.minio_key);
