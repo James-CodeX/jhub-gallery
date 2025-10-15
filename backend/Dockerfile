@@ -22,11 +22,13 @@ COPY package*.json ./
 
 # Stage 2: Development dependencies
 FROM base AS deps
-RUN npm ci
+# Using npm install since package-lock.json may not exist
+RUN npm install --frozen-lockfile || npm install
 
 # Stage 3: Production dependencies only
 FROM base AS prod-deps
-RUN npm ci --omit=dev
+# Using npm install since package-lock.json may not exist
+RUN npm install --frozen-lockfile --omit=dev || npm install --omit=dev
 
 # Stage 4: Build stage
 FROM base AS builder

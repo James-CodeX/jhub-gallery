@@ -11,7 +11,8 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci
+# Using npm install since package-lock.json may not exist
+RUN npm install --frozen-lockfile || npm install
 
 # Stage 2: Builder
 FROM node:18-alpine AS builder
