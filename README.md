@@ -247,22 +247,6 @@ npm run build
 npm start
 ```
 
-### Docker
-
-```bash
-# Start all services
-docker-compose up -d
-
-# Stop all services
-docker-compose down
-
-# View logs
-docker-compose logs -f
-
-# Restart a specific service
-docker-compose restart minio
-```
-
 ## 📊 Database Schema
 
 The database includes the following tables:
@@ -289,63 +273,6 @@ See `database/init.sql` for the complete schema.
 - Restrict MinIO console access
 - Set up proper firewall rules
 - Use environment-specific `.env` files
-
-## 📈 Next Steps (Phase 2)
-
-Phase 1 is now complete! The infrastructure is ready. Next phases include:
-
-- **Phase 2**: Backend API Development (Week 2)
-
-  - Folder management endpoints
-  - File upload with presigned URLs
-  - Share link generation
-  - Bulk download as ZIP
-
-- **Phase 3**: Frontend Development (Week 3)
-
-  - Admin dashboard
-  - Folder tree navigation
-  - File upload component
-  - Share link interface
-
-- **Phase 4**: Optimization (Week 4)
-  - CDN integration
-  - Image optimization
-  - Caching strategies
-  - Performance tuning
-
-## 🐛 Troubleshooting
-
-### Docker containers won't start
-
-```bash
-# Check Docker Desktop is running
-# Stop all containers and remove volumes
-docker-compose down -v
-
-# Start fresh
-docker-compose up -d
-```
-
-### Can't connect to database
-
-```bash
-# Check PostgreSQL is running
-docker-compose ps
-
-# View PostgreSQL logs
-docker-compose logs postgres
-
-# Verify credentials in backend/.env
-```
-
-### MinIO buckets not created
-
-```bash
-# Run the initialization script again
-cd minio-init
-init.bat  # or ./init.sh on Linux/Mac
-```
 
 ### Port conflicts
 

@@ -9,8 +9,7 @@
     "dev": "nodemon src/index.js",
     "migrate": "node scripts/migrate.js",
     "migrate-folders": "node scripts/migrate-folders-to-minio.js",
-    "fix-minio": "node scripts/fix-minio-policies.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "fix-minio": "node scripts/fix-minio-policies.js"
   },
   "keywords": [
     "photo-gallery",
@@ -22,14 +21,10 @@
   "license": "MIT",
   "dependencies": {
     "archiver": "^6.0.1",
-    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
-    "express-rate-limit": "^7.1.5",
-    "express-validator": "^7.0.1",
     "helmet": "^7.1.0",
-    "jsonwebtoken": "^9.0.2",
     "minio": "^7.1.3",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
