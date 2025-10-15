@@ -3,6 +3,9 @@ const nextConfig = {
   reactStrictMode: true,
   // Enable standalone output for Docker optimization
   output: 'standalone',
+  // Disable experimental features that might interfere
+  poweredByHeader: false,
+  compress: true,
   images: {
     remotePatterns: [
       {
