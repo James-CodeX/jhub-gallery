@@ -29,10 +29,15 @@ const nextConfig = {
     ],
   },
   async rewrites() {
+    // Only add rewrite if API URL is defined
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiUrl) {
+      return [];
+    }
     return [
       {
         source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL}/:path*`,
+        destination: `${apiUrl}/:path*`,
       },
     ];
   },
