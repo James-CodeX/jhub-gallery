@@ -8,6 +8,10 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'JHUB Gallery - Photo Management System',
   description: 'Fast and elegant photo gallery system for JHUB Africa',
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/favicon.svg',
+  },
 }
 
 export default function RootLayout({
