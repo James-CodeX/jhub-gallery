@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { foldersApi } from '@/lib/api/folders';
 import { useFolderTree } from '@/lib/hooks/useFolders';
@@ -79,6 +79,8 @@ function FolderTreeNode({
 
 export default function FolderGalleryPage() {
   const params = useParams();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const folderId = params.folderId as string;
   const [selectedFile, setSelectedFile] = useState<PhotoFile | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
@@ -143,11 +145,6 @@ export default function FolderGalleryPage() {
     });
   };
 
-  const handleImageClick = (file: PhotoFile, index: number) => {
-    setSelectedFile(file);
-    setSelectedIndex(index);
-  };
-
   // Filter and sort files
   const filteredFiles = folderData?.files
     .filter(file => file.original_name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -156,12 +153,36 @@ export default function FolderGalleryPage() {
       return new Date(b.uploaded_at).getTime() - new Date(a.uploaded_at).getTime();
     }) || [];
 
+  // Handle opening image from URL on mount
+  useEffect(() => {
+    const imageId = searchParams.get('image');
+    if (imageId && filteredFiles.length > 0) {
+      const index = filteredFiles.findIndex(f => f.id === imageId);
+      if (index !== -1) {
+        setSelectedFile(filteredFiles[index]);
+        setSelectedIndex(index);
+      }
+    }
+  }, [searchParams, filteredFiles]);
+
+  const handleImageClick = (file: PhotoFile, index: number) => {
+    setSelectedFile(file);
+    setSelectedIndex(index);
+    router.push(`/gallery/${folderId}?image=${file.id}`, { scroll: false });
+  };
+
+  const handleCloseImage = () => {
+    setSelectedFile(null);
+    router.push(`/gallery/${folderId}`, { scroll: false });
+  };
+
   const handleNavigate = (direction: 'prev' | 'next') => {
     const newIndex = direction === 'next' 
       ? (selectedIndex + 1) % filteredFiles.length
       : (selectedIndex - 1 + filteredFiles.length) % filteredFiles.length;
     setSelectedIndex(newIndex);
     setSelectedFile(filteredFiles[newIndex]);
+    router.push(`/gallery/${folderId}?image=${filteredFiles[newIndex].id}`, { scroll: false });
   };
 
   if (isLoading) {
@@ -427,7 +448,7 @@ export default function FolderGalleryPage() {
       {selectedFile && folderData && (
         <ImagePreviewModal
           file={selectedFile}
-          onClose={() => setSelectedFile(null)}
+          onClose={handleCloseImage}
           onDelete={() => {}}
           onNext={selectedIndex < filteredFiles.length - 1 ? () => handleNavigate('next') : undefined}
           onPrevious={selectedIndex > 0 ? () => handleNavigate('prev') : undefined}
