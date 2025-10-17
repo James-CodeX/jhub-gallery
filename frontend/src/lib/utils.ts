@@ -71,7 +71,7 @@ export function isImageFile(mimeType: string): boolean {
  */
 export function getThumbnailUrl(thumbnailKey: string | null): string | null {
   if (!thumbnailKey) return null;
-  const minioEndpoint = process.env.NEXT_PUBLIC_MINIO_ENDPOINT || 'http://minio.jameskaranja.me:9000';
+  const minioEndpoint = process.env.NEXT_PUBLIC_MINIO_ENDPOINT || 'http://localhost:9000';
   const bucket = process.env.NEXT_PUBLIC_MINIO_BUCKET_THUMBNAILS || 'jhub-photos-thumbnails';
   return `${minioEndpoint}/${bucket}/${thumbnailKey}`;
 }
@@ -80,7 +80,7 @@ export function getThumbnailUrl(thumbnailKey: string | null): string | null {
  * Generate original image URL for MinIO
  */
 export function getImageUrl(minioKey: string): string {
-  const minioEndpoint = process.env.NEXT_PUBLIC_MINIO_ENDPOINT || 'http://minio.jameskaranja.me:9000';
+  const minioEndpoint = process.env.NEXT_PUBLIC_MINIO_ENDPOINT || 'http://localhost:9000';
   const bucket = process.env.NEXT_PUBLIC_MINIO_BUCKET_ORIGINAL || 'jhub-photos-original';
   const url = `${minioEndpoint}/${bucket}/${minioKey}`;
   

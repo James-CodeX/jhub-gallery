@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, X, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useFileUpload } from '@/lib/hooks/useUpload';
@@ -14,11 +14,13 @@ interface FileUploadProps {
 
 export function FileUpload({ folderId, onComplete }: FileUploadProps) {
   const [uploadQueue, setUploadQueue] = useState<Map<string, UploadProgress>>(new Map());
+  const [totalFiles, setTotalFiles] = useState(0);
+  const [completedFiles, setCompletedFiles] = useState(0);
   const { uploadFile } = useFileUpload();
 
   const processFile = useCallback(
     async (file: File) => {
-      const fileId = `${Date.now()}-${file.name}`;
+      const fileId = `${Date.now()}-${Math.random()}-${file.name}`;
 
       // Add to queue
       setUploadQueue((prev) => {
@@ -76,6 +78,9 @@ export function FileUpload({ folderId, onComplete }: FileUploadProps) {
           return next;
         });
 
+        // Increment completed count
+        setCompletedFiles((prev) => prev + 1);
+
         // Auto-remove after 3 seconds
         setTimeout(() => {
           setUploadQueue((prev) => {
@@ -84,8 +89,6 @@ export function FileUpload({ folderId, onComplete }: FileUploadProps) {
             return next;
           });
         }, 3000);
-
-        onComplete?.();
       } catch (error) {
         console.error('Upload error:', error);
         setUploadQueue((prev) => {
@@ -99,17 +102,36 @@ export function FileUpload({ folderId, onComplete }: FileUploadProps) {
           });
           return next;
         });
+        
+        // Increment completed count even for errors
+        setCompletedFiles((prev) => prev + 1);
       }
     },
-    [folderId, uploadFile, onComplete]
+    [folderId, uploadFile]
   );
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
-      acceptedFiles.forEach(processFile);
+      if (acceptedFiles.length > 0) {
+        setTotalFiles((prev) => prev + acceptedFiles.length);
+        acceptedFiles.forEach(processFile);
+      }
     },
     [processFile]
   );
+
+  // Trigger onComplete when all files are done
+  useEffect(() => {
+    if (totalFiles > 0 && completedFiles === totalFiles) {
+      onComplete?.();
+      // Reset counters after a delay
+      const timeout = setTimeout(() => {
+        setTotalFiles(0);
+        setCompletedFiles(0);
+      }, 3000);
+      return () => clearTimeout(timeout);
+    }
+  }, [completedFiles, totalFiles, onComplete]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -156,7 +178,18 @@ export function FileUpload({ folderId, onComplete }: FileUploadProps) {
       {/* Upload Queue */}
       {uploads.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-medium text-gray-700">Uploading Files</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium text-gray-700">
+              {completedFiles === totalFiles && totalFiles > 0
+                ? 'Upload Complete'
+                : 'Uploading Files'}
+            </h3>
+            {totalFiles > 0 && (
+              <span className="text-xs text-gray-500">
+                {completedFiles} / {totalFiles} files
+              </span>
+            )}
+          </div>
           {uploads.map((upload) => (
             <div
               key={upload.fileId}

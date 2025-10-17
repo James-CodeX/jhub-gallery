@@ -435,7 +435,6 @@ export default function FolderPage() {
                 folderId={folderId}
                 onComplete={() => {
                   refetch();
-                  setShowUpload(false);
                 }}
               />
             </div>
