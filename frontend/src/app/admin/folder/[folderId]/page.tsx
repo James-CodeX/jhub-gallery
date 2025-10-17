@@ -605,15 +605,12 @@ export default function FolderPage() {
       {selectedFile && folder && (
         <ImagePreviewModal
           file={selectedFile}
+          files={filteredFiles}
           onClose={handleCloseFile}
           onDelete={async () => {
             await handleDelete(selectedFile);
             handleCloseFile();
           }}
-          onNext={selectedIndex < filteredFiles.length - 1 ? () => handleNavigate('next') : undefined}
-          onPrevious={selectedIndex > 0 ? () => handleNavigate('prev') : undefined}
-          nextFile={selectedIndex < filteredFiles.length - 1 ? filteredFiles[selectedIndex + 1] : undefined}
-          previousFile={selectedIndex > 0 ? filteredFiles[selectedIndex - 1] : undefined}
         />
       )}
 

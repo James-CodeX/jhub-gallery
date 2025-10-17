@@ -191,27 +191,12 @@ export function GalleryGrid({
         {selectedFile && (
           <ImagePreviewModal
             file={selectedFile}
+            files={filteredFiles}
             onClose={() => setSelectedFile(null)}
             onDelete={() => {
               handleDelete(selectedFile);
               setSelectedFile(null);
             }}
-            onPrevious={
-              (() => {
-                const currentIndex = filteredFiles.findIndex(f => f.id === selectedFile.id);
-                return currentIndex > 0
-                  ? () => handleFileClick(filteredFiles[currentIndex - 1])
-                  : undefined;
-              })()
-            }
-            onNext={
-              (() => {
-                const currentIndex = filteredFiles.findIndex(f => f.id === selectedFile.id);
-                return currentIndex < filteredFiles.length - 1
-                  ? () => handleFileClick(filteredFiles[currentIndex + 1])
-                  : undefined;
-              })()
-            }
           />
         )}
       </>
@@ -286,27 +271,12 @@ export function GalleryGrid({
       {selectedFile && (
         <ImagePreviewModal
           file={selectedFile}
+          files={filteredFiles}
           onClose={() => setSelectedFile(null)}
           onDelete={() => {
             handleDelete(selectedFile);
             setSelectedFile(null);
           }}
-          onPrevious={
-            (() => {
-              const currentIndex = filteredFiles.findIndex(f => f.id === selectedFile.id);
-              return currentIndex > 0
-                ? () => handleFileClick(filteredFiles[currentIndex - 1])
-                : undefined;
-            })()
-          }
-          onNext={
-            (() => {
-              const currentIndex = filteredFiles.findIndex(f => f.id === selectedFile.id);
-              return currentIndex < filteredFiles.length - 1
-                ? () => handleFileClick(filteredFiles[currentIndex + 1])
-                : undefined;
-            })()
-          }
         />
       )}
     </div>

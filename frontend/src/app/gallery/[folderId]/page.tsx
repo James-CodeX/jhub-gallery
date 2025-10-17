@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { foldersApi } from '@/lib/api/folders';
@@ -84,6 +84,7 @@ export default function FolderGalleryPage() {
   const folderId = params.folderId as string;
   const [selectedFile, setSelectedFile] = useState<PhotoFile | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
+  const isClosingRef = useRef(false);
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     if (typeof window !== 'undefined') {
       return window.innerWidth >= 768;
@@ -156,7 +157,19 @@ export default function FolderGalleryPage() {
   // Handle opening image from URL on mount
   useEffect(() => {
     const imageId = searchParams.get('image');
-    if (imageId && filteredFiles.length > 0) {
+    
+    // If we're intentionally closing, skip this effect
+    if (isClosingRef.current) {
+      isClosingRef.current = false;
+      return;
+    }
+    
+    if (!imageId) {
+      setSelectedFile(null);
+      return;
+    }
+    
+    if (filteredFiles.length > 0) {
       const index = filteredFiles.findIndex(f => f.id === imageId);
       if (index !== -1) {
         setSelectedFile(filteredFiles[index]);
@@ -166,12 +179,14 @@ export default function FolderGalleryPage() {
   }, [searchParams, filteredFiles]);
 
   const handleImageClick = (file: PhotoFile, index: number) => {
+    isClosingRef.current = false;
     setSelectedFile(file);
     setSelectedIndex(index);
     router.push(`/gallery/${folderId}?image=${file.id}`, { scroll: false });
   };
 
   const handleCloseImage = () => {
+    isClosingRef.current = true;
     setSelectedFile(null);
     router.push(`/gallery/${folderId}`, { scroll: false });
   };
@@ -448,12 +463,9 @@ export default function FolderGalleryPage() {
       {selectedFile && folderData && (
         <ImagePreviewModal
           file={selectedFile}
+          files={filteredFiles}
           onClose={handleCloseImage}
           onDelete={() => {}}
-          onNext={selectedIndex < filteredFiles.length - 1 ? () => handleNavigate('next') : undefined}
-          onPrevious={selectedIndex > 0 ? () => handleNavigate('prev') : undefined}
-          nextFile={selectedIndex < filteredFiles.length - 1 ? filteredFiles[selectedIndex + 1] : undefined}
-          previousFile={selectedIndex > 0 ? filteredFiles[selectedIndex - 1] : undefined}
         />
       )}
 
