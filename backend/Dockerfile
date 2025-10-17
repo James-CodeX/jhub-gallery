@@ -68,4 +68,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
 ENTRYPOINT ["dumb-init", "--"]
 
 # Start the application
-CMD ["node", "src/index.js"]
+# First run MinIO initialization, then start the server
+CMD ["sh", "-c", "node scripts/init-minio.js || echo 'MinIO init failed, continuing...'; node src/index.js"]

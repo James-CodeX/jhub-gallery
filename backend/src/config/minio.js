@@ -3,14 +3,19 @@ import config from '../config/index.js';
 
 class MinIOClient {
   constructor() {
-    this.client = new Client({
+    const clientConfig = {
       endPoint: config.minio.endPoint,
-      port: config.minio.port,
       useSSL: config.minio.useSSL,
       accessKey: config.minio.accessKey,
       secretKey: config.minio.secretKey,
-    });
+    };
 
+    // Only add port if it's explicitly set (for local development)
+    if (config.minio.port) {
+      clientConfig.port = config.minio.port;
+    }
+
+    this.client = new Client(clientConfig);
     this.buckets = config.minio.buckets;
   }
 

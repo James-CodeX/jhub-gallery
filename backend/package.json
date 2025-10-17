@@ -7,9 +7,8 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "migrate": "node scripts/migrate.js",
-    "migrate-folders": "node scripts/migrate-folders-to-minio.js",
-    "fix-minio": "node scripts/fix-minio-policies.js"
+    "minio": "node scripts/init-minio.js",
+    "migrate": "node scripts/migrate.js"
   },
   "keywords": [
     "photo-gallery",

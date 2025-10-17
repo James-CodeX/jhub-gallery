@@ -8,12 +8,12 @@ echo "🚀 Initializing MinIO for JHUB Gallery..."
 
 # Wait for MinIO to be ready (with timeout)
 echo "⏳ Waiting for MinIO to be ready..."
-TIMEOUT=60
+TIMEOUT=120
 ELAPSED=0
 until curl -sf http://minio:9000/minio/health/live > /dev/null 2>&1; do
   echo "MinIO is unavailable - sleeping (${ELAPSED}s/${TIMEOUT}s)"
-  sleep 2
-  ELAPSED=$((ELAPSED + 2))
+  sleep 3
+  ELAPSED=$((ELAPSED + 3))
   if [ $ELAPSED -ge $TIMEOUT ]; then
     echo "❌ Timeout waiting for MinIO"
     exit 1
@@ -37,8 +37,17 @@ mc alias set myminio http://minio:9000 $MINIO_USER $MINIO_PASS || {
 
 # Create buckets
 echo "📦 Creating buckets..."
-mc mb myminio/$BUCKET_ORIGINAL --ignore-existing || echo "⚠️  Bucket $BUCKET_ORIGINAL already exists"
-mc mb myminio/$BUCKET_THUMBNAILS --ignore-existing || echo "⚠️  Bucket $BUCKET_THUMBNAILS already exists"
+if mc mb myminio/$BUCKET_ORIGINAL --ignore-existing; then
+  echo "✅ Created bucket: $BUCKET_ORIGINAL"
+else
+  echo "✅ Bucket already exists: $BUCKET_ORIGINAL"
+fi
+
+if mc mb myminio/$BUCKET_THUMBNAILS --ignore-existing; then
+  echo "✅ Created bucket: $BUCKET_THUMBNAILS"
+else
+  echo "✅ Bucket already exists: $BUCKET_THUMBNAILS"
+fi
 
 # Set public read policy on thumbnails bucket
 echo "🔓 Setting public read policy on thumbnails bucket..."
@@ -56,7 +65,11 @@ cat > /tmp/policy.json <<EOF
 }
 EOF
 
-mc anonymous set-json /tmp/policy.json myminio/$BUCKET_THUMBNAILS
+if mc anonymous set-json /tmp/policy.json myminio/$BUCKET_THUMBNAILS; then
+  echo "✅ Set public read policy for: $BUCKET_THUMBNAILS"
+else
+  echo "⚠️  Failed to set policy on thumbnails bucket, continuing..."
+fi
 
 # Set public read policy on original photos bucket (for direct image access)
 echo "🔓 Setting public read policy on original photos bucket..."
@@ -74,9 +87,11 @@ cat > /tmp/policy-original.json <<EOF
 }
 EOF
 
-mc anonymous set-json /tmp/policy-original.json myminio/$BUCKET_ORIGINAL || {
+if mc anonymous set-json /tmp/policy-original.json myminio/$BUCKET_ORIGINAL; then
+  echo "✅ Set public read policy for: $BUCKET_ORIGINAL"
+else
   echo "⚠️  Failed to set policy on original bucket, continuing..."
-}
+fi
 
 # Set versioning on original photos bucket
 echo "📝 Enabling versioning on original photos bucket..."
